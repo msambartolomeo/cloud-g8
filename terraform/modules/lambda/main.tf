@@ -6,23 +6,8 @@ resource "aws_security_group" "lambda" {
   # TODO: add rules if needed
 }
 
-data "aws_iam_policy_document" "assume_role" {
-  statement {
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-
-    actions = ["sts:AssumeRole"]
-  }
-}
-
-# FIXME: error creating IAM role
-resource "aws_iam_role" "lambda" {
-  name               = "lambda"
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+data "aws_iam_role" "lambda" {
+  name = "LabRole"
 }
 
 resource "aws_lambda_function" "self" {
@@ -30,7 +15,7 @@ resource "aws_lambda_function" "self" {
 
   filename      = each.value.path
   function_name = each.value.name
-  role          = aws_iam_role.lambda.arn
+  role          = data.aws_iam_role.lambda.arn
   handler       = each.value.handler
   runtime       = var.runtime
 
@@ -43,5 +28,5 @@ resource "aws_lambda_function" "self" {
     Name = "lambda-${each.value.name}"
   }
 
-  depends_on = [aws_security_group.lambda, aws_iam_role.lambda]
+  depends_on = [aws_security_group.lambda]
 }

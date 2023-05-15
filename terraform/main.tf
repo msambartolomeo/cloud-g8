@@ -24,5 +24,13 @@ module "s3" {
 
   bucket_name = var.bucket_name
   domain_name = var.domain_name
-  account_id = var.account_id
+  #account_id = var.account_id
+  CDN_OAI = [module.cloudfront.OAI]
+}
+
+module "cloudfront" {
+  source = "./modules/cdn"
+  bucket_regional_domain_name = module.s3.bucket_regional_domain_name
+  bucket_id = module.s3.bucket_id
+  bucket_name = module.s3.bucket_id
 }

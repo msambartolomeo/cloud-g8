@@ -3,5 +3,5 @@ output "vpc" {
 }
 
 output "s3" {
-  value = module.s3.s3_bucket
+  value = module.s3
 }

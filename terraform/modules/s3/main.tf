@@ -1,7 +1,10 @@
 resource "aws_s3_bucket" "cloud_website" {
-  bucket = "www.${var.bucket_name}"
+  bucket_prefix = var.bucket__prefix
 
-  tags = { Project : "websites" }
+  tags = { 
+    Name : var.bucket_name
+    Environment : "Dev"
+  }
 }
 
 resource "aws_s3_bucket_website_configuration" "website_config" {
@@ -16,20 +19,53 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
   }
 
 }
+resource "aws_s3_bucket_ownership_controls" "bucket_ownership_controls" {
+  bucket = aws_s3_bucket.cloud_website.id
+  depends_on = [aws_s3_bucket_ownership_controls.bucket_ownership_controls]
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+
+resource "aws_s3_bucket_acl" "acl_config"{
+  bucket = aws_s3_bucket.cloud_website.id
+  acl = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "public_access_config"{
+  bucket = aws_s3_bucket.cloud_website.id
+
+  block_public_acls = true
+  block_public_policy = true
+  ignore_public_acls = true
+  restrict_public_buckets = true
+}
 
 resource "aws_s3_bucket_versioning" "file-versioning" {
   bucket = aws_s3_bucket.cloud_website.id
+
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-data "aws_iam_policy_document" "allow_access_from_another_account" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "encryption_config"{
+  bucket = aws_s3_bucket.cloud_website.id
+
+  rule {
+    apply_server_side_encryption_by_default{
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+data "aws_iam_policy_document" "allow_access_from_cloudfront" {
   statement {
-    sid = "PublicReadGetObject"
+
     principals {
       type="AWS"
-      identifiers=["arn:aws:iam::${var.account_id}:role/LabRole"]
+      identifiers = var.CDN_OAI
     }
 
     actions = [
@@ -43,9 +79,9 @@ data "aws_iam_policy_document" "allow_access_from_another_account" {
   }
 }
 
-resource "aws_s3_bucket_policy" "bucket_policy" {
+resource "aws_s3_bucket_policy" "cloudfront_policy" {
   bucket = aws_s3_bucket.cloud_website.id
-  policy = data.aws_iam_policy_document.allow_access_from_another_account.json
+  policy = data.aws_iam_policy_document.allow_access_from_cloudfront.json
 }
 
 resource "aws_s3_object" "html" {
